@@ -7,6 +7,7 @@ import type {
   SNRatioType,
   AnalysisResult,
   OrthogonalArray,
+  InputMode,
 } from '../types';
 import { selectOrthogonalArray, getArraySubset } from '../utils/taguchi/orthogonalArrays';
 import { performTaguchiAnalysis } from '../utils/taguchi/mainEffects';
@@ -22,6 +23,7 @@ const initialState: ExperimentState = {
   targetValue: null,
   analysisResult: null,
   trialsPerRun: 3,
+  inputMode: 'raw',
 };
 
 // Action 類型
@@ -30,13 +32,16 @@ type Action =
   | { type: 'REMOVE_FACTOR'; payload: string }
   | { type: 'UPDATE_FACTOR'; payload: { id: string; updates: Partial<Factor> } }
   | { type: 'UPDATE_RUN'; payload: { runId: number; trials: number[] } }
+  | { type: 'UPDATE_RUN_SNRATIO'; payload: { runId: number; snRatio: number } }
   | { type: 'SET_SN_RATIO_TYPE'; payload: SNRatioType }
   | { type: 'SET_TARGET_VALUE'; payload: number | null }
   | { type: 'SET_TRIALS_PER_RUN'; payload: number }
+  | { type: 'SET_INPUT_MODE'; payload: InputMode }
   | { type: 'SET_ANALYSIS_RESULT'; payload: AnalysisResult | null }
   | { type: 'LOAD_SAMPLE_DATA'; payload?: 'injection' | 'hardness' | 'defect' }
   | { type: 'RESET_EXPERIMENT' }
-  | { type: 'UPDATE_ORTHOGONAL_ARRAY' };
+  | { type: 'UPDATE_ORTHOGONAL_ARRAY' }
+  | { type: 'LOAD_SAVED_STATE'; payload: ExperimentState };
 
 // 生成新因子 ID
 function generateFactorId(existingFactors: Factor[]): string {
@@ -148,6 +153,19 @@ function experimentReducer(state: ExperimentState, action: Action): ExperimentSt
       };
     }
 
+    case 'UPDATE_RUN_SNRATIO': {
+      const { runId, snRatio } = action.payload;
+      const newRuns = state.runs.map((run) =>
+        run.runId === runId ? { ...run, snRatio } : run
+      );
+
+      return {
+        ...state,
+        runs: newRuns,
+        analysisResult: null,
+      };
+    }
+
     case 'SET_SN_RATIO_TYPE':
       return {
         ...state,
@@ -191,6 +209,13 @@ function experimentReducer(state: ExperimentState, action: Action): ExperimentSt
       };
     }
 
+    case 'SET_INPUT_MODE':
+      return {
+        ...state,
+        inputMode: action.payload,
+        analysisResult: null,
+      };
+
     case 'SET_ANALYSIS_RESULT':
       return {
         ...state,
@@ -209,6 +234,7 @@ function experimentReducer(state: ExperimentState, action: Action): ExperimentSt
         snRatioType: sample.snRatioType,
         targetValue: sample.targetValue,
         trialsPerRun: sample.trialsPerRun,
+        inputMode: 'raw', // 範例數據使用原始數據模式
         analysisResult: null,
       };
     }
@@ -227,6 +253,9 @@ function experimentReducer(state: ExperimentState, action: Action): ExperimentSt
         analysisResult: null,
       };
     }
+
+    case 'LOAD_SAVED_STATE':
+      return action.payload;
 
     default:
       return state;
@@ -252,15 +281,44 @@ export function ExperimentProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'UPDATE_FACTOR', payload: { id, updates } }),
     updateRun: (runId, trials) =>
       dispatch({ type: 'UPDATE_RUN', payload: { runId, trials } }),
+    updateRunSNRatio: (runId, snRatio) =>
+      dispatch({ type: 'UPDATE_RUN_SNRATIO', payload: { runId, snRatio } }),
     setSNRatioType: (type) => dispatch({ type: 'SET_SN_RATIO_TYPE', payload: type }),
     setTargetValue: (value) => dispatch({ type: 'SET_TARGET_VALUE', payload: value }),
     setTrialsPerRun: (count) => dispatch({ type: 'SET_TRIALS_PER_RUN', payload: count }),
+    setInputMode: (mode) => dispatch({ type: 'SET_INPUT_MODE', payload: mode }),
     calculateAnalysis: () => {
-      const result = performTaguchiAnalysis(state.factors, state.runs, state.snRatioType);
+      const result = performTaguchiAnalysis(state.factors, state.runs, state.snRatioType, state.inputMode);
       dispatch({ type: 'SET_ANALYSIS_RESULT', payload: result });
     },
     loadSampleData: (sampleKey) => dispatch({ type: 'LOAD_SAMPLE_DATA', payload: sampleKey }),
     resetExperiment: () => dispatch({ type: 'RESET_EXPERIMENT' }),
+    saveExperiment: () => {
+      try {
+        localStorage.setItem('taguchi_quick_save', JSON.stringify(state));
+      } catch (error) {
+        console.error('儲存實驗失敗:', error);
+      }
+    },
+    loadExperiment: () => {
+      try {
+        const saved = localStorage.getItem('taguchi_quick_save');
+        if (saved) {
+          const savedState = JSON.parse(saved) as ExperimentState;
+          // 確保舊資料有 inputMode 欄位
+          const stateWithDefaults: ExperimentState = {
+            ...savedState,
+            inputMode: savedState.inputMode ?? 'raw',
+          };
+          dispatch({ type: 'LOAD_SAVED_STATE', payload: stateWithDefaults });
+          return true;
+        }
+        return false;
+      } catch (error) {
+        console.error('載入實驗失敗:', error);
+        return false;
+      }
+    },
   };
 
   return (

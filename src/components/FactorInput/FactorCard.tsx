@@ -17,14 +17,26 @@ export function FactorCard({ factor, onUpdate, onRemove, canRemove }: FactorCard
 
   const handleLevelChange = (index: number, value: string) => {
     const newLevels = [...factor.levels];
-    newLevels[index] = parseFloat(value) || 0;
+    // 只有當整個字串都是有效數字時，才轉換成數字
+    const trimmedValue = value.trim();
+    const numValue = parseFloat(trimmedValue);
+
+    // 檢查是否為純數字：轉換後再轉回字串要完全相同
+    if (!isNaN(numValue) && String(numValue) === trimmedValue) {
+      newLevels[index] = numValue;
+    } else {
+      // 保留原始字串（支援 "1:1", "低", "高" 等）
+      newLevels[index] = value;
+    }
     onUpdate({ levels: newLevels });
   };
 
   const addLevel = () => {
     if (factor.levels.length < 5) {
-      const lastLevel = factor.levels[factor.levels.length - 1] || 0;
-      onUpdate({ levels: [...factor.levels, lastLevel + 1] });
+      const lastLevel = factor.levels[factor.levels.length - 1];
+      // 如果最後一個水準是數字，自動 +1；如果是文字，就用空字串
+      const newLevel = typeof lastLevel === 'number' ? lastLevel + 1 : '';
+      onUpdate({ levels: [...factor.levels, newLevel] });
     }
   };
 
@@ -94,13 +106,13 @@ export function FactorCard({ factor, onUpdate, onRemove, canRemove }: FactorCard
                 L{index + 1}
               </span>
               <input
-                type="number"
+                type="text"
                 value={level}
                 onChange={(e) => handleLevelChange(index, e.target.value)}
                 className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded
                          bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
                          focus:outline-none focus:ring-2 focus:ring-blue-500"
-                step="any"
+                placeholder="值"
               />
             </div>
           ))}

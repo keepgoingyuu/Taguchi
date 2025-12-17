@@ -18,8 +18,9 @@ export function validateFactor(factor: Factor): { valid: boolean; errors: string
     errors.push('水準數量最多 5 個');
   }
 
-  if (factor.levels.some((level) => isNaN(level))) {
-    errors.push('所有水準值必須是有效數字');
+  // 檢查空值
+  if (factor.levels.some((level) => level === '' || level === null || level === undefined)) {
+    errors.push('水準值不可為空');
   }
 
   // 檢查重複的水準值

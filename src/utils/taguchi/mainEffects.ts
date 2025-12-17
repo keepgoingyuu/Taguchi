@@ -1,4 +1,4 @@
-import type { ExperimentRun, Factor, AnalysisResult, SNRatioType } from '../../types';
+import type { ExperimentRun, Factor, AnalysisResult, SNRatioType, InputMode } from '../../types';
 import { calculateSNRatio, calculateMean } from './snRatio';
 
 /**
@@ -7,7 +7,8 @@ import { calculateSNRatio, calculateMean } from './snRatio';
 export function calculateMainEffects(
   factors: Factor[],
   runs: ExperimentRun[],
-  snRatioType: SNRatioType
+  snRatioType: SNRatioType,
+  inputMode: InputMode = 'raw'
 ): { meanResponse: Record<string, number[]>; snRatios: Record<string, number[]> } {
   const meanResponse: Record<string, number[]> = {};
   const snRatios: Record<string, number[]> = {};
@@ -27,9 +28,18 @@ export function calculateMainEffects(
       levelMeans.push(calculateMean(averages));
 
       // 計算該水準的 S/N 比平均
-      const snValues = runsAtLevel.map((run) =>
-        calculateSNRatio(run.trials, snRatioType)
-      );
+      let snValues: number[];
+      if (inputMode === 'snRatio') {
+        // S/N 比直接輸入模式：使用已輸入的 S/N 比
+        snValues = runsAtLevel
+          .filter((run) => run.snRatio !== undefined && !isNaN(run.snRatio))
+          .map((run) => run.snRatio!);
+      } else {
+        // 原始數據模式：從試驗數據計算 S/N 比
+        snValues = runsAtLevel.map((run) =>
+          calculateSNRatio(run.trials, snRatioType)
+        );
+      }
       levelSNRatios.push(calculateMean(snValues));
     }
 
@@ -135,10 +145,18 @@ export function predictOptimalValue(
 export function performTaguchiAnalysis(
   factors: Factor[],
   runs: ExperimentRun[],
-  snRatioType: SNRatioType
+  snRatioType: SNRatioType,
+  inputMode: InputMode = 'raw'
 ): AnalysisResult {
   // 檢查是否有有效數據
-  const validRuns = runs.filter((run) => run.trials.length > 0 && run.trials.some((t) => !isNaN(t)));
+  let validRuns: ExperimentRun[];
+  if (inputMode === 'snRatio') {
+    // S/N 比模式：檢查是否有輸入 S/N 比
+    validRuns = runs.filter((run) => run.snRatio !== undefined && !isNaN(run.snRatio));
+  } else {
+    // 原始數據模式：檢查是否有試驗數據
+    validRuns = runs.filter((run) => run.trials.length > 0 && run.trials.some((t) => !isNaN(t)));
+  }
 
   if (validRuns.length === 0) {
     return {
@@ -152,7 +170,7 @@ export function performTaguchiAnalysis(
   }
 
   // 計算主效應
-  const { meanResponse, snRatios } = calculateMainEffects(factors, validRuns, snRatioType);
+  const { meanResponse, snRatios } = calculateMainEffects(factors, validRuns, snRatioType, inputMode);
 
   // 計算整體平均
   const grandMean = calculateGrandMean(validRuns);

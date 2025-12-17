@@ -5,7 +5,7 @@ import { Button } from '../ui/Button';
 import { Select } from '../ui/Select';
 import { Input } from '../ui/Input';
 import { Table, TableHead, TableBody, TableRow, TableCell } from '../ui/Table';
-import { SNRatioTypeLabels } from '../../types';
+import { SNRatioTypeLabels, InputModeLabels } from '../../types';
 import { getArraySubset, convertToActualLevels } from '../../utils/taguchi/orthogonalArrays';
 import { canPerformAnalysis } from '../../utils/validation';
 
@@ -18,6 +18,7 @@ export function ResultsTable() {
     snRatioType,
     targetValue,
     trialsPerRun,
+    inputMode,
   } = state;
 
   if (!orthogonalArray || factors.length === 0) {
@@ -36,7 +37,17 @@ export function ResultsTable() {
     actions.updateRun(runId, newTrials);
   };
 
+  const handleSNRatioChange = (runId: number, value: string) => {
+    const snRatio = parseFloat(value) || 0;
+    actions.updateRunSNRatio(runId, snRatio);
+  };
+
   const validation = canPerformAnalysis(factors, runs, targetValue, snRatioType);
+
+  const inputModeOptions = Object.entries(InputModeLabels).map(([value, { label }]) => ({
+    value,
+    label,
+  }));
 
   const snOptions = Object.entries(SNRatioTypeLabels).map(([value, { label, description }]) => ({
     value,
@@ -60,20 +71,31 @@ export function ResultsTable() {
         {/* 設定區 */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Select
-            label="S/N 比類型"
-            options={snOptions}
-            value={snRatioType}
-            onChange={(e) => actions.setSNRatioType(e.target.value as typeof snRatioType)}
+            label="資料輸入模式"
+            options={inputModeOptions}
+            value={inputMode}
+            onChange={(e) => actions.setInputMode(e.target.value as typeof inputMode)}
           />
 
-          <Select
-            label="每次實驗試驗數"
-            options={trialsOptions}
-            value={trialsPerRun.toString()}
-            onChange={(e) => actions.setTrialsPerRun(parseInt(e.target.value))}
-          />
+          {inputMode === 'raw' && (
+            <Select
+              label="每次實驗試驗數"
+              options={trialsOptions}
+              value={trialsPerRun.toString()}
+              onChange={(e) => actions.setTrialsPerRun(parseInt(e.target.value))}
+            />
+          )}
 
-          {snRatioType === 'nominal' && (
+          {inputMode === 'raw' && (
+            <Select
+              label="S/N 比類型"
+              options={snOptions}
+              value={snRatioType}
+              onChange={(e) => actions.setSNRatioType(e.target.value as typeof snRatioType)}
+            />
+          )}
+
+          {inputMode === 'raw' && snRatioType === 'nominal' && (
             <Input
               label="目標值"
               type="number"
@@ -85,13 +107,20 @@ export function ResultsTable() {
           )}
         </div>
 
-        {/* S/N 比說明 */}
+        {/* 模式說明 */}
         <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-          <strong>{SNRatioTypeLabels[snRatioType].label}：</strong>
-          {SNRatioTypeLabels[snRatioType].description}
-          <span className="text-gray-500 dark:text-gray-500">
-            {' '}（例如：{SNRatioTypeLabels[snRatioType].example}）
-          </span>
+          <strong>{InputModeLabels[inputMode || 'raw'].label}：</strong>
+          {InputModeLabels[inputMode || 'raw'].description}
+          {inputMode === 'raw' && (
+            <>
+              <br />
+              <strong className="mt-2 inline-block">{SNRatioTypeLabels[snRatioType].label}：</strong>
+              {SNRatioTypeLabels[snRatioType].description}
+              <span className="text-gray-500 dark:text-gray-500">
+                {' '}（例如：{SNRatioTypeLabels[snRatioType].example}）
+              </span>
+            </>
+          )}
         </div>
 
         {/* 結果輸入表格 */}
@@ -108,14 +137,22 @@ export function ResultsTable() {
                       {factor.id}
                     </TableCell>
                   ))}
-                  {Array.from({ length: trialsPerRun }).map((_, i) => (
-                    <TableCell header key={`trial-${i}`} className="text-center min-w-24">
-                      試驗 {i + 1}
+                  {inputMode === 'raw' ? (
+                    <>
+                      {Array.from({ length: trialsPerRun }).map((_, i) => (
+                        <TableCell header key={`trial-${i}`} className="text-center min-w-24">
+                          試驗 {i + 1}
+                        </TableCell>
+                      ))}
+                      <TableCell header className="text-center min-w-20">
+                        平均
+                      </TableCell>
+                    </>
+                  ) : (
+                    <TableCell header className="text-center min-w-32">
+                      S/N 比 (dB)
                     </TableCell>
-                  ))}
-                  <TableCell header className="text-center min-w-20">
-                    平均
-                  </TableCell>
+                  )}
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -129,23 +166,40 @@ export function ResultsTable() {
                         {level}
                       </TableCell>
                     ))}
-                    {Array.from({ length: trialsPerRun }).map((_, trialIndex) => (
-                      <TableCell key={`trial-${trialIndex}`} className="p-1">
+                    {inputMode === 'raw' ? (
+                      <>
+                        {Array.from({ length: trialsPerRun }).map((_, trialIndex) => (
+                          <TableCell key={`trial-${trialIndex}`} className="p-1">
+                            <input
+                              type="number"
+                              value={run.trials[trialIndex] || ''}
+                              onChange={(e) => handleTrialChange(run.runId, trialIndex, e.target.value)}
+                              className="w-full px-2 py-1 text-sm text-center border border-gray-300 dark:border-gray-600 rounded
+                                       bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
+                                       focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              step="any"
+                              placeholder="0"
+                            />
+                          </TableCell>
+                        ))}
+                        <TableCell className="text-center font-medium">
+                          {run.average.toFixed(2)}
+                        </TableCell>
+                      </>
+                    ) : (
+                      <TableCell className="p-1">
                         <input
                           type="number"
-                          value={run.trials[trialIndex] || ''}
-                          onChange={(e) => handleTrialChange(run.runId, trialIndex, e.target.value)}
+                          value={run.snRatio ?? ''}
+                          onChange={(e) => handleSNRatioChange(run.runId, e.target.value)}
                           className="w-full px-2 py-1 text-sm text-center border border-gray-300 dark:border-gray-600 rounded
                                    bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
                                    focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          step="any"
-                          placeholder="0"
+                          step="0.01"
+                          placeholder="0.00"
                         />
                       </TableCell>
-                    ))}
-                    <TableCell className="text-center font-medium">
-                      {run.average.toFixed(2)}
-                    </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

@@ -6,7 +6,7 @@ import { calculateSNRatio } from '../../utils/taguchi/snRatio';
 
 export function CalculationDetails() {
   const { state } = useExperiment();
-  const { factors, runs, analysisResult, snRatioType } = state;
+  const { factors, runs, analysisResult, snRatioType, inputMode } = state;
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     snRatio: false,
     levelAverages: true,
@@ -24,11 +24,17 @@ export function CalculationDetails() {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
-  // 計算每個實驗的 S/N 比
+  // 計算或取得每個實驗的 S/N 比
   const experimentSNRatios = runs.map((run) => {
-    const validTrials = run.trials.filter((t) => !isNaN(t) && t !== 0);
-    if (validTrials.length === 0) return 0;
-    return calculateSNRatio(validTrials, snRatioType);
+    if (inputMode === 'snRatio') {
+      // S/N 比直接輸入模式：直接使用輸入的值
+      return run.snRatio ?? 0;
+    } else {
+      // 原始數據模式：計算 S/N 比
+      const validTrials = run.trials.filter((t) => !isNaN(t) && t !== 0);
+      if (validTrials.length === 0) return 0;
+      return calculateSNRatio(validTrials, snRatioType);
+    }
   });
 
   // 根據直交表找出每個因子每個水準對應的實驗
@@ -44,7 +50,8 @@ export function CalculationDetails() {
       description="詳細的田口方法計算步驟，幫助理解分析原理"
     >
       <div className="space-y-4">
-        {/* S/N 比計算 */}
+        {/* S/N 比計算 - 僅在原始數據模式顯示 */}
+        {inputMode === 'raw' && (
         <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
           <button
             onClick={() => toggleSection('snRatio')}
@@ -110,6 +117,7 @@ export function CalculationDetails() {
             </div>
           )}
         </div>
+        )}
 
         {/* Level 平均值計算（重點！） */}
         <div className="border border-green-200 dark:border-green-700 rounded-lg overflow-hidden">
@@ -119,7 +127,7 @@ export function CalculationDetails() {
           >
             <div className="flex items-center gap-2">
               <Calculator className="w-5 h-5 text-green-500" />
-              <span className="font-semibold">2. 各因子各水準平均 S/N 比計算</span>
+              <span className="font-semibold">{inputMode === 'raw' ? '2' : '1'}. 各因子各水準平均 S/N 比計算</span>
             </div>
             {expandedSections.levelAverages ? (
               <ChevronUp className="w-5 h-5" />
@@ -201,7 +209,7 @@ export function CalculationDetails() {
           >
             <div className="flex items-center gap-2">
               <Calculator className="w-5 h-5 text-purple-500" />
-              <span className="font-semibold">3. 最佳組合與預測值</span>
+              <span className="font-semibold">{inputMode === 'raw' ? '3' : '2'}. 最佳組合與預測值</span>
             </div>
             {expandedSections.optimal ? (
               <ChevronUp className="w-5 h-5" />

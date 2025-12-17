@@ -2,7 +2,7 @@
 export interface Factor {
   id: string;
   name: string;           // 因子名稱 (例: 模具溫度、射出壓力)
-  levels: number[];       // 水準值 [60, 70, 80]
+  levels: (number | string)[];       // 水準值 [60, 70, 80] 或 ["低", "中", "高"]
 }
 
 // 單次實驗結果
@@ -14,8 +14,23 @@ export interface ExperimentRun {
   snRatio?: number;       // S/N比
 }
 
+// 輸入模式類型
+export type InputMode = 'raw' | 'snRatio';
+
 // S/N比類型
 export type SNRatioType = 'smaller' | 'larger' | 'nominal';
+
+// 輸入模式描述
+export const InputModeLabels: Record<InputMode, { label: string; description: string }> = {
+  raw: {
+    label: '原始數據模式',
+    description: '輸入試驗數據，系統自動計算 S/N 比',
+  },
+  snRatio: {
+    label: 'S/N 比直接輸入',
+    description: '直接輸入已計算好的 S/N 比數值',
+  },
+};
 
 // S/N比類型描述
 export const SNRatioTypeLabels: Record<SNRatioType, { label: string; description: string; example: string }> = {
@@ -64,6 +79,7 @@ export interface ExperimentState {
   targetValue: number | null;
   analysisResult: AnalysisResult | null;
   trialsPerRun: number;   // 每次實驗的試驗次數
+  inputMode: InputMode;   // 輸入模式
 }
 
 // 實驗操作
@@ -72,10 +88,14 @@ export interface ExperimentActions {
   removeFactor: (id: string) => void;
   updateFactor: (id: string, updates: Partial<Factor>) => void;
   updateRun: (runId: number, trials: number[]) => void;
+  updateRunSNRatio: (runId: number, snRatio: number) => void;
   setSNRatioType: (type: SNRatioType) => void;
   setTargetValue: (value: number | null) => void;
   setTrialsPerRun: (count: number) => void;
+  setInputMode: (mode: InputMode) => void;
   calculateAnalysis: () => void;
   loadSampleData: (sampleKey: 'injection' | 'hardness' | 'defect') => void;
   resetExperiment: () => void;
+  saveExperiment: () => void;
+  loadExperiment: () => boolean;
 }
