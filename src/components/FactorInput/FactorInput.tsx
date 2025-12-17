@@ -1,12 +1,15 @@
-import { Plus, Upload, RotateCcw } from 'lucide-react';
+import { Plus, Upload, RotateCcw, ChevronDown } from 'lucide-react';
+import { useState } from 'react';
 import { useExperiment } from '../../contexts/ExperimentContext';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { FactorCard } from './FactorCard';
+import { sampleDatasets } from '../../utils/sampleData';
 
 export function FactorInput() {
   const { state, actions } = useExperiment();
   const { factors } = state;
+  const [showSampleMenu, setShowSampleMenu] = useState(false);
 
   return (
     <Card
@@ -24,14 +27,33 @@ export function FactorInput() {
             <Plus className="w-4 h-4 mr-1" />
             新增因子
           </Button>
-          <Button
-            variant="secondary"
-            onClick={actions.loadSampleData}
-            size="sm"
-          >
-            <Upload className="w-4 h-4 mr-1" />
-            載入範例
-          </Button>
+          <div className="relative">
+            <Button
+              variant="secondary"
+              onClick={() => setShowSampleMenu(!showSampleMenu)}
+              size="sm"
+            >
+              <Upload className="w-4 h-4 mr-1" />
+              載入範例
+              <ChevronDown className="w-4 h-4 ml-1" />
+            </Button>
+            {showSampleMenu && (
+              <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 w-64">
+                {Object.entries(sampleDatasets).map(([key, { name }]) => (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      actions.loadSampleData(key as 'injection' | 'hardness' | 'defect');
+                      setShowSampleMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-gray-700 dark:text-gray-200 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-white first:rounded-t-lg last:rounded-b-lg transition-colors text-sm"
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           {factors.length > 0 && (
             <Button
               variant="ghost"

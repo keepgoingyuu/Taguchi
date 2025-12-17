@@ -48,12 +48,12 @@ export function SNRatioPlot() {
       font: { size: 16, color: isDark ? '#F3F4F6' : '#1F2937' },
     },
     xaxis: {
-      title: '水準',
+      title: { text: '水準' },
       color: isDark ? '#9CA3AF' : '#6B7280',
       gridcolor: isDark ? '#374151' : '#E5E7EB',
     },
     yaxis: {
-      title: 'S/N 比 (dB)',
+      title: { text: 'S/N 比 (dB)' },
       color: isDark ? '#9CA3AF' : '#6B7280',
       gridcolor: isDark ? '#374151' : '#E5E7EB',
     },

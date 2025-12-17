@@ -13,7 +13,6 @@ export function BestCombination() {
   const { optimalLevels, predictedOptimal, grandMean } = analysisResult;
 
   // 計算改善幅度
-  const currentBest = Math.max(...runs.map((r) => r.average));
   const currentWorst = Math.min(...runs.map((r) => r.average));
   const improvementFromWorst =
     currentWorst !== 0

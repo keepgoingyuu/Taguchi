@@ -47,12 +47,12 @@ export function MainEffectsPlot() {
       font: { size: 16, color: isDark ? '#F3F4F6' : '#1F2937' },
     },
     xaxis: {
-      title: '水準',
+      title: { text: '水準' },
       color: isDark ? '#9CA3AF' : '#6B7280',
       gridcolor: isDark ? '#374151' : '#E5E7EB',
     },
     yaxis: {
-      title: '平均反應值',
+      title: { text: '平均反應值' },
       color: isDark ? '#9CA3AF' : '#6B7280',
       gridcolor: isDark ? '#374151' : '#E5E7EB',
     },

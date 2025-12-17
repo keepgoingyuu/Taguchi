@@ -76,6 +76,6 @@ export interface ExperimentActions {
   setTargetValue: (value: number | null) => void;
   setTrialsPerRun: (count: number) => void;
   calculateAnalysis: () => void;
-  loadSampleData: () => void;
+  loadSampleData: (sampleKey: 'injection' | 'hardness' | 'defect') => void;
   resetExperiment: () => void;
 }

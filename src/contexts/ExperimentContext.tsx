@@ -11,7 +11,7 @@ import type {
 import { selectOrthogonalArray, getArraySubset } from '../utils/taguchi/orthogonalArrays';
 import { performTaguchiAnalysis } from '../utils/taguchi/mainEffects';
 import { calculateMean } from '../utils/taguchi/snRatio';
-import { defaultSampleData } from '../utils/sampleData';
+import { sampleDatasets } from '../utils/sampleData';
 
 // 初始狀態
 const initialState: ExperimentState = {
@@ -34,7 +34,7 @@ type Action =
   | { type: 'SET_TARGET_VALUE'; payload: number | null }
   | { type: 'SET_TRIALS_PER_RUN'; payload: number }
   | { type: 'SET_ANALYSIS_RESULT'; payload: AnalysisResult | null }
-  | { type: 'LOAD_SAMPLE_DATA' }
+  | { type: 'LOAD_SAMPLE_DATA'; payload?: 'injection' | 'hardness' | 'defect' }
   | { type: 'RESET_EXPERIMENT' }
   | { type: 'UPDATE_ORTHOGONAL_ARRAY' };
 
@@ -198,7 +198,8 @@ function experimentReducer(state: ExperimentState, action: Action): ExperimentSt
       };
 
     case 'LOAD_SAMPLE_DATA': {
-      const sample = defaultSampleData;
+      const sampleKey = action.payload || 'injection';
+      const sample = sampleDatasets[sampleKey].data;
       const newArray = selectOrthogonalArray(sample.factors);
 
       return {
@@ -258,7 +259,7 @@ export function ExperimentProvider({ children }: { children: ReactNode }) {
       const result = performTaguchiAnalysis(state.factors, state.runs, state.snRatioType);
       dispatch({ type: 'SET_ANALYSIS_RESULT', payload: result });
     },
-    loadSampleData: () => dispatch({ type: 'LOAD_SAMPLE_DATA' }),
+    loadSampleData: (sampleKey) => dispatch({ type: 'LOAD_SAMPLE_DATA', payload: sampleKey }),
     resetExperiment: () => dispatch({ type: 'RESET_EXPERIMENT' }),
   };
 

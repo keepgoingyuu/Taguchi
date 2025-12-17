@@ -5,6 +5,7 @@ import { ArraySelector } from './components/OrthogonalArray/ArraySelector';
 import { ArrayTable } from './components/OrthogonalArray/ArrayTable';
 import { ResultsTable } from './components/ExperimentInput/ResultsTable';
 import { AnalysisPanel } from './components/Analysis/AnalysisPanel';
+import { CalculationDetails } from './components/Analysis/CalculationDetails';
 import { MainEffectsPlot } from './components/Visualization/MainEffectsPlot';
 import { SNRatioPlot } from './components/Visualization/SNRatioPlot';
 import { BestCombination } from './components/OptimalResult/BestCombination';
@@ -38,6 +39,9 @@ function AppContent() {
               <>
                 {/* 步驟 4: 分析結果 */}
                 <AnalysisPanel />
+
+                {/* 步驟 4.5: 計算過程詳解 */}
+                <CalculationDetails />
 
                 {/* 圖表視覺化 */}
                 <div className="grid gap-8 lg:grid-cols-2">
